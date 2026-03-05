@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sohbet Oyunu | Admin Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { background-color: #050505; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        .sidebar { width: 260px; background: #0a0a0a; border-right: 1px solid #1a1a1a; height: 100vh; position: fixed; }
+        .main-content { margin-left: 260px; padding: 40px; }
+        .glass-card { background: rgba(15, 15, 15, 0.8); border: 1px solid #222; border-radius: 16px; backdrop-filter: blur(10px); }
+        .nav-item { transition: 0.3s; cursor: pointer; border-radius: 8px; }
+        .nav-item:hover, .nav-item.active { background: #1a1a1a; color: #3b82f6; }
+        .stat-input { background: #111; border: 1px solid #333; color: white; border-radius: 6px; padding: 5px 10px; width: 80px; }
+        .btn-save { background: #10b981; color: white; padding: 6px 15px; border-radius: 6px; font-size: 14px; transition: 0.2s; }
+        .btn-save:hover { background: #059669; transform: scale(1.05); }
+        .btn-reset { background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; }
+        input[type="text"] { background: #0f0f0f; border: 1px solid #222; transition: 0.3s; }
+        input[type="text"]:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar p-6 flex flex-col">
+        <h2 class="text-xl font-bold text-white mb-10 flex items-center">
+            <i class="fas fa-shield-halved mr-3 text-blue-500"></i> Sohbet Admin
+        </h2>
+        
+        <nav class="space-y-2 flex-1">
+            <div class="nav-item p-3 flex items-center"><i class="fas fa-home mr-3 w-5"></i> Dashboard</div>
+            <div id="btnUserData" class="nav-item active p-3 flex items-center"><i class="fas fa-users mr-3 w-5"></i> Kullanıcı Verileri</div>
+            <div class="nav-item p-3 flex items-center"><i class="fas fa-ban mr-3 w-5"></i> Yasaklılar</div>
+            <div class="nav-item p-3 flex items-center"><i class="fas fa-cog mr-3 w-5"></i> Ayarlar</div>
+        </nav>
+
+        <div class="text-xs text-gray-600 mt-auto">v2.1 Stable Build</div>
+    </div>
+
+    <div class="main-content">
+        <div id="searchView">
+            <h1 class="text-3xl font-bold mb-2">Kullanıcı Yönetimi</h1>
+            <p class="text-gray-500 mb-8">Oyuncu verilerini arat, düzenle ve anlık olarak güncelle.</p>
+
+            <div class="glass-card p-4 mb-8 flex gap-4">
+                <input type="text" id="nameSearch" placeholder="Oyuncu ismini giriniz..." class="flex-1 rounded-lg px-4 py-3">
+                <button onclick="searchPlayer()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-bold transition">
+                    <i class="fas fa-search mr-2"></i> Ara
+                </button>
+            </div>
+
+            <div id="resultsList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+
+        <div id="detailView" class="hidden">
+            <button onclick="backToSearch()" class="text-gray-400 hover:text-white mb-6 transition">
+                <i class="fas fa-arrow-left mr-2"></i> Geri Dön
+            </button>
+            
+            <div class="glass-card p-8 max-w-2xl">
+                <div class="flex items-center mb-8">
+                    <img id="pAvatar" src="" class="w-20 h-20 rounded-full border-2 border-blue-500 p-1 mr-6">
+                    <div>
+                        <h2 id="pName" class="text-3xl font-bold text-white">---</h2>
+                        <p id="pId" class="text-gray-500 italic">ID: 000000</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="p-6 bg-[#0c0c0c] border border-gray-800 rounded-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-green-500 font-bold uppercase tracking-wider">Mevcut TL: <span id="curTL" class="text-white ml-2">0</span></span>
+                            <button onclick="resetVal('TL')" class="btn-reset hover:bg-red-600 transition">Sıfırla</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 items-end">
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">Yeni Değer Yap</label>
+                                <input type="number" id="setTL" class="stat-input w-full" placeholder="Örn: 50">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">Üstüne Ekle</label>
+                                <input type="number" id="addTL" class="stat-input w-full" placeholder="Örn: 10">
+                            </div>
+                        </div>
+                        <button onclick="saveStat('TL')" class="btn-save w-full mt-4"><i class="fas fa-save mr-2"></i> TL Değişikliklerini Kaydet</button>
+                    </div>
+
+                    <div class="p-6 bg-[#0c0c0c] border border-gray-800 rounded-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-yellow-500 font-bold uppercase tracking-wider">Mevcut Minutes: <span id="curMins" class="text-white ml-2">0</span></span>
+                            <button onclick="resetVal('Minutes')" class="btn-reset hover:bg-red-600 transition">Sıfırla</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 items-end">
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">Yeni Değer Yap</label>
+                                <input type="number" id="setMins" class="stat-input w-full" placeholder="Örn: 120">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">Üstüne Ekle</label>
+                                <input type="number" id="addMins" class="stat-input w-full" placeholder="Örn: 5">
+                            </div>
+                        </div>
+                        <button onclick="saveStat('Minutes')" class="btn-save w-full mt-4"><i class="fas fa-save mr-2"></i> Minutes Değişikliklerini Kaydet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // FIREBASE CONFIG
+        const firebaseConfig = { databaseURL: "https://spyder-43f86-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let activeUser = null;
+
+        // Arama Fonksiyonu
+        async function searchPlayer() {
+            const query = document.getElementById('nameSearch').value.toLowerCase();
+            const resultsDiv = document.getElementById('resultsList');
+            resultsDiv.innerHTML = '<p class="text-gray-500">Aranıyor...</p>';
+
+            const snapshot = await db.ref('users').once('value');
+            const users = snapshot.val();
+            resultsDiv.innerHTML = '';
+
+            for (let id in users) {
+                const user = users[id];
+                // İsme göre filtrele (Lua kodunda Name kaydetmiş olmalısın)
+                if (user.Name && user.Name.toLowerCase().includes(query)) {
+                    const card = document.createElement('div');
+                    card.className = "glass-card p-4 flex items-center hover:border-blue-500 cursor-pointer transition";
+                    card.onclick = () => openDetails(id, user);
+                    card.innerHTML = `
+                        <img src="https://www.roblox.com/headshot-thumbnail/image?userId=${id}&width=150&height=150&format=png" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <div class="font-bold text-white">${user.Name}</div>
+                            <div class="text-xs text-gray-500">ID: ${id}</div>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(card);
+                }
+            }
+        }
+
+        // Detay Sayfasını Aç
+        function openDetails(id, data) {
+            activeUser = { id, ...data };
+            document.getElementById('searchView').classList.add('hidden');
+            document.getElementById('detailView').classList.remove('hidden');
+
+            document.getElementById('pName').innerText = data.Name;
+            document.getElementById('pId').innerText = "ID: " + id;
+            document.getElementById('pAvatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${id}&width=420&height=420&format=png`;
+            
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('curTL').innerText = activeUser.TL || 0;
+            document.getElementById('curMins').innerText = activeUser.Minutes || 0;
+        }
+
+        function backToSearch() {
+            document.getElementById('detailView').classList.add('hidden');
+            document.getElementById('searchView').classList.remove('hidden');
+        }
+
+        // Kaydetme Mantığı (Ayarla veya Ekle)
+        async function saveStat(type) {
+            if(!activeUser) return;
+            
+            let newValue = 0;
+            const setInput = document.getElementById(`set${type}`).value;
+            const addInput = document.getElementById(`add${type}`).value;
+
+            if (setInput !== "") {
+                newValue = parseInt(setInput);
+            } else if (addInput !== "") {
+                const current = activeUser[type] || 0;
+                newValue = current + parseInt(addInput);
+            } else {
+                alert("Lütfen bir değer girin!");
+                return;
+            }
+
+            await db.ref(`users/${activeUser.id}`).update({ [type]: newValue });
+            activeUser[type] = newValue;
+            updateDisplay();
+            
+            // Inputları temizle
+            document.getElementById(`set${type}`).value = "";
+            document.getElementById(`add${type}`).value = "";
+            alert(`${type} güncellendi!`);
+        }
+
+        // Sıfırlama
+        async function resetVal(type) {
+            if(confirm(`Bu oyuncunun ${type} değerini sıfırlamak istiyor musun?`)) {
+                await db.ref(`users/${activeUser.id}`).update({ [type]: 0 });
+                activeUser[type] = 0;
+                updateDisplay();
+            }
+        }
+    </script>
+</body>
+</html>
