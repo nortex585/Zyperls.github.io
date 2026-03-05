@@ -3,205 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sohbet Oyunu | Admin Manager</title>
+    <title>Sohbet Admin | Pro Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        /* Tam Siyah Tema ve Modern Efektler */
-        :root {
-            --accent: #3b82f6;
-            --bg: #000000;
-            --card-bg: #0a0a0a;
-            --border: #1a1a1a;
-        }
+        :root { --blue: #3b82f6; --red: #ef4444; --green: #10b981; }
+        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        
+        /* Layout */
+        .sidebar { width: 320px; background: #050505; border-right: 1px solid #111; height: 100vh; position: fixed; }
+        .main-content { margin-left: 320px; padding: 40px; height: 100vh; overflow-y: auto; background: radial-gradient(circle at top right, #0a0a10, #000); }
 
-        body {
-            background-color: var(--bg);
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            overflow: hidden;
+        /* Player List & Search */
+        .player-list { height: calc(100vh - 160px); overflow-y: auto; padding-right: 10px; }
+        .player-card { 
+            background: #080808; border: 1px solid #151515; transition: 0.3s; cursor: pointer;
+            border-radius: 15px; margin-bottom: 10px;
         }
+        .player-card:hover { border-color: var(--blue); background: #0f0f12; transform: scale(1.02); }
+        .player-card.active { border-color: var(--blue); background: linear-gradient(90deg, #0f172a 0%, #000 100%); box-shadow: 0 0 20px rgba(59, 130, 246, 0.1); }
 
-        /* Sidebar Tasarımı */
-        .sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #050505 0%, #000000 100%);
-            border-right: 1px solid var(--border);
-            height: 100vh;
-            position: fixed;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-            z-index: 50;
-        }
+        /* Components */
+        .glass-card { background: #050505; border: 1px solid #1a1a1a; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .neon-input { background: #000; border: 1px solid #222; border-radius: 10px; padding: 10px 15px; color: #fff; transition: 0.3s; }
+        .neon-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.4s ease-out; }
 
-        /* Gradient ve Glow Efektli Kartlar */
-        .glass-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
-            transition: all 0.3s ease;
-        }
-
-        .glass-card:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
-        }
-
-        .main-content {
-            margin-left: 280px;
-            height: 100vh;
-            overflow-y: auto;
-            padding: 50px;
-            background: radial-gradient(circle at top right, #0a0a0f, #000000);
-        }
-
-        /* Input ve Butonlar */
-        .neon-input {
-            background: #050505;
-            border: 1px solid #222;
-            color: white;
-            padding: 12px 18px;
-            border-radius: 12px;
-            transition: 0.3s;
-        }
-
-        .neon-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-            outline: none;
-        }
-
-        .btn-gradient {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            transition: 0.3s;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar flex flex-col p-6">
-        <div class="flex items-center gap-3 mb-12">
-            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-                <i class="fas fa-crown text-white"></i>
+    <div class="sidebar p-6 flex flex-col">
+        <div class="flex items-center gap-3 mb-8">
+            <div class="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-900/40">
+                <i class="fas fa-database text-white"></i>
             </div>
-            <h2 class="text-xl font-black tracking-tighter uppercase">Sohbet <span class="text-blue-500">Admin</span></h2>
+            <h1 class="font-black text-xl tracking-tighter uppercase">Sohbet <span class="text-blue-500">Manager</span></h1>
         </div>
 
-        <nav class="space-y-3">
-            <div onclick="showPage('dashboard')" class="nav-item flex items-center gap-4 p-4 rounded-xl cursor-pointer hover:bg-zinc-900 text-gray-400 hover:text-white transition-all active" id="nav-dashboard">
-                <i class="fas fa-chart-line w-5"></i> Dashboard
-            </div>
-            <div onclick="showPage('users')" class="nav-item flex items-center gap-4 p-4 rounded-xl cursor-pointer hover:bg-zinc-900 text-gray-400 hover:text-white transition-all" id="nav-users">
-                <i class="fas fa-user-gear w-5"></i> Kullanıcı Verileri
-            </div>
-            <div class="flex items-center gap-4 p-4 rounded-xl text-gray-600 cursor-not-allowed">
-                <i class="fas fa-lock w-5"></i> Loglar (Yakında)
-            </div>
-        </nav>
+        <div class="relative mb-6">
+            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600"></i>
+            <input type="text" id="listSearch" onkeyup="filterList()" placeholder="Oyuncu ara..." class="w-full neon-input pl-10 text-sm">
+        </div>
 
-        <div class="mt-auto p-4 glass-card bg-zinc-950/50">
-            <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Server Status</p>
-            <p class="text-xs text-green-500 flex items-center gap-2 mt-1">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
-            </p>
+        <div id="playerContainer" class="player-list">
+            <div class="text-zinc-700 text-center mt-20 text-sm">Veriler çekiliyor...</div>
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content flex items-center justify-center">
         
-        <div id="page-dashboard">
-            <h1 class="text-4xl font-bold mb-4">Hoş Geldin, Admin</h1>
-            <p class="text-gray-500 mb-10">Sohbet oyunu verilerini buradan anlık yönetebilirsin.</p>
-            
-            <div class="grid grid-cols-3 gap-6">
-                <div class="glass-card p-6 bg-gradient-to-br from-zinc-900 to-black">
-                    <p class="text-gray-400 text-sm">Toplam Kayıtlı Oyuncu</p>
-                    <h3 id="stat-total" class="text-3xl font-bold mt-2">--</h3>
-                </div>
-            </div>
+        <div id="emptyState" class="text-center opacity-30">
+            <i class="fas fa-id-card-alt text-8xl mb-4"></i>
+            <p class="text-xl font-medium uppercase tracking-widest">Yönetmek İçin Oyuncu Seçin</p>
         </div>
 
-        <div id="page-users" class="hidden">
-            <h1 class="text-4xl font-bold mb-8">Kullanıcı Verileri</h1>
-
-            <div class="glass-card p-6 mb-10 flex gap-4 bg-zinc-950/40">
-                <div class="relative flex-1">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                    <input type="text" id="userInput" placeholder="Oyuncu ismini tam yazınız..." class="w-full neon-input pl-12">
-                </div>
-                <button onclick="searchPlayer()" class="btn-gradient px-10 py-3 rounded-xl font-bold">SORGULA</button>
-            </div>
-
-            <div id="search-loading" class="hidden text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-blue-500"></i></div>
-            <div id="user-details" class="hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <div class="glass-card p-8 flex flex-col items-center text-center">
-                        <div class="relative">
-                            <img id="pAvatar" src="" class="w-32 h-32 rounded-full border-4 border-blue-600/20 p-2 mb-4 shadow-2xl shadow-blue-500/10">
-                            <div class="absolute bottom-4 right-0 w-6 h-6 bg-green-500 border-4 border-black rounded-full"></div>
-                        </div>
-                        <h2 id="pName" class="text-2xl font-bold">---</h2>
-                        <p id="pId" class="text-gray-500 text-sm mt-1">ID: 000000</p>
-                        <div id="pDate" class="mt-4 text-[10px] text-zinc-600 bg-zinc-900 px-3 py-1 rounded-full uppercase">---</div>
+        <div id="detailPanel" class="hidden w-full max-w-3xl animate-fade">
+            <div class="glass-card p-10 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
+                
+                <div class="flex items-center gap-10 mb-12">
+                    <div class="relative group">
+                        <img id="pAvatar" src="" class="w-32 h-32 rounded-full border-4 border-zinc-900 shadow-2xl transition group-hover:border-blue-500">
+                        <div class="absolute bottom-2 right-2 w-6 h-6 bg-green-500 border-4 border-black rounded-full shadow-lg"></div>
                     </div>
-
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="glass-card p-6 border-l-4 border-l-green-500">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <p class="text-xs text-gray-500 uppercase font-bold">Mevcut Bakiye</p>
-                                    <h4 class="text-3xl font-mono font-bold text-green-400"><span id="valTL">0</span> TL</h4>
-                                </div>
-                                <button onclick="resetVal('TL')" class="btn-danger px-4 py-2 rounded-lg text-xs font-bold">SIFIRLA</button>
-                            </div>
-                            <div class="flex gap-3">
-                                <input type="number" id="setTL" placeholder="Yeni Değer" class="neon-input flex-1 text-sm">
-                                <button onclick="updateStat('TL', 'set')" class="btn-gradient px-4 rounded-lg text-xs font-bold">SET</button>
-                                <input type="number" id="addTL" placeholder="Ekle (+)" class="neon-input flex-1 text-sm">
-                                <button onclick="updateStat('TL', 'add')" class="btn-gradient px-4 rounded-lg text-xs font-bold">EKLE</button>
-                            </div>
+                    <div>
+                        <h2 id="pName" class="text-5xl font-black tracking-tight">---</h2>
+                        <div class="flex gap-4 mt-2">
+                            <span id="pId" class="text-blue-500 font-mono text-sm">ID: 000000</span>
+                            <span class="text-zinc-600 text-sm">|</span>
+                            <span id="pDate" class="text-zinc-600 text-sm uppercase tracking-tighter">--</span>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="glass-card p-6 border-l-4 border-l-blue-500">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <p class="text-xs text-gray-500 uppercase font-bold">Oynama Süresi</p>
-                                    <h4 class="text-3xl font-mono font-bold text-blue-400"><span id="valMins">0</span> Dakika</h4>
-                                </div>
-                                <button onclick="resetVal('Minutes')" class="btn-danger px-4 py-2 rounded-lg text-xs font-bold">SIFIRLA</button>
-                            </div>
-                            <div class="flex gap-3">
-                                <input type="number" id="setMins" placeholder="Yeni Değer" class="neon-input flex-1 text-sm">
-                                <button onclick="updateStat('Minutes', 'set')" class="btn-gradient px-4 rounded-lg text-xs font-bold">SET</button>
-                                <input type="number" id="addMins" placeholder="Ekle (+)" class="neon-input flex-1 text-sm">
-                                <button onclick="updateStat('Minutes', 'add')" class="btn-gradient px-4 rounded-lg text-xs font-bold">EKLE</button>
+                <div class="grid grid-cols-2 gap-8 mb-10">
+                    <div class="bg-[#080808] p-8 rounded-3xl border border-white/5 relative group">
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Bakiye Durumu</p>
+                        <div class="text-5xl font-black text-green-500 mb-6"><span id="valTL">0</span> <span class="text-lg text-zinc-700">TL</span></div>
+                        
+                        <div class="space-y-3">
+                            <input type="number" id="inputTL" placeholder="Miktar..." class="w-full neon-input text-sm">
+                            <div class="flex gap-2">
+                                <button onclick="updateData('TL', 'set')" class="flex-1 bg-white text-black font-bold py-2 rounded-lg text-[10px] hover:bg-zinc-200 transition">SET</button>
+                                <button onclick="updateData('TL', 'add')" class="flex-1 bg-blue-600 font-bold py-2 rounded-lg text-[10px] hover:bg-blue-700 transition">EKLE (+)</button>
                             </div>
                         </div>
                     </div>
 
+                    <div class="bg-[#080808] p-8 rounded-3xl border border-white/5 relative">
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Oynama Süresi</p>
+                        <div class="text-5xl font-black text-blue-400 mb-6"><span id="valMins">0</span> <span class="text-lg text-zinc-700">DK</span></div>
+                        
+                        <div class="space-y-3">
+                            <input type="number" id="inputMins" placeholder="Miktar..." class="w-full neon-input text-sm">
+                            <div class="flex gap-2">
+                                <button onclick="updateData('Minutes', 'set')" class="flex-1 bg-white text-black font-bold py-2 rounded-lg text-[10px] hover:bg-zinc-200 transition">SET</button>
+                                <button onclick="updateData('Minutes', 'add')" class="flex-1 bg-blue-600 font-bold py-2 rounded-lg text-[10px] hover:bg-blue-700 transition">EKLE (+)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-zinc-900 pt-8 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-sm font-bold text-zinc-400 italic italic">Tehlikeli Bölge</h4>
+                        <p class="text-[10px] text-zinc-600">Bu işlem geri alınamaz.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="resetSpecific('TL')" class="px-4 py-2 border border-zinc-800 rounded-lg text-[10px] font-bold hover:bg-red-500/10 hover:text-red-500 transition">TL SIFIRLA</button>
+                        <button onclick="resetSpecific('Minutes')" class="px-4 py-2 border border-zinc-800 rounded-lg text-[10px] font-bold hover:bg-red-500/10 hover:text-red-500 transition">DK SIFIRLA</button>
+                        <button onclick="wipeUser()" class="px-6 py-2 bg-red-600 rounded-lg text-[10px] font-bold hover:bg-red-700 transition shadow-lg shadow-red-900/20">KULLANICIYI SİL</button>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -210,99 +133,99 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let currentUser = null;
+        let currentUsers = {};
+        let selectedId = null;
 
-        // Sayfa Değiştirme Fonksiyonu
-        function showPage(pageName) {
-            document.getElementById('page-dashboard').classList.add('hidden');
-            document.getElementById('page-users').classList.add('hidden');
-            document.getElementById('nav-dashboard').classList.remove('bg-zinc-900', 'text-white');
-            document.getElementById('nav-users').classList.remove('bg-zinc-900', 'text-white');
+        // VERİLERİ ÇEK VE LİSTEYİ GÜNCELLE
+        db.ref('users').on('value', (snap) => {
+            currentUsers = snap.val() || {};
+            renderList();
+            if(selectedId) updateDisplay(); // Seçili oyuncu varsa ekranı güncelle
+        });
 
-            document.getElementById('page-' + pageName).classList.remove('hidden');
-            document.getElementById('nav-' + pageName).classList.add('bg-zinc-900', 'text-white');
+        function renderList() {
+            const container = document.getElementById('playerContainer');
+            container.innerHTML = '';
+
+            Object.keys(currentUsers).forEach(id => {
+                const user = currentUsers[id];
+                const card = document.createElement('div');
+                card.className = `player-card p-4 flex items-center gap-4 ${selectedId === id ? 'active' : ''}`;
+                card.id = `card-${id}`;
+                card.onclick = () => selectUser(id);
+
+                card.innerHTML = `
+                    <img src="https://www.roblox.com/headshot-thumbnail/image?userId=${id}&width=150&height=150&format=png" class="w-12 h-12 rounded-full bg-zinc-900">
+                    <div class="overflow-hidden">
+                        <div class="font-bold text-sm truncate">${user.Name || 'Bilinmiyor'}</div>
+                        <div class="text-[10px] text-zinc-600 font-mono">ID: ${id}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterList() {
+            const val = document.getElementById('listSearch').value.toLowerCase();
+            document.querySelectorAll('.player-card').forEach(card => {
+                const name = card.querySelector('.font-bold').innerText.toLowerCase();
+                card.style.display = name.includes(val) ? 'flex' : 'none';
+            });
+        }
+
+        function selectUser(id) {
+            selectedId = id;
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('detailPanel').classList.remove('hidden');
+            updateDisplay();
             
-            if(pageName === 'dashboard') updateGlobalStats();
+            // Aktif kartı boya
+            document.querySelectorAll('.player-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card-${id}`).classList.add('active');
         }
 
-        async function updateGlobalStats() {
-            const snap = await db.ref('users').once('value');
-            document.getElementById('stat-total').innerText = snap.numChildren() || 0;
-        }
-
-        // OYUNCU ARAMA (İsme göre)
-        async function searchPlayer() {
-            const nameToSearch = document.getElementById('userInput').value.trim();
-            if(!nameToSearch) return;
-
-            document.getElementById('search-loading').classList.remove('hidden');
-            document.getElementById('user-details').classList.add('hidden');
-
-            const snapshot = await db.ref('users').once('value');
-            const users = snapshot.val();
-            let foundId = null;
-            let foundData = null;
-
-            for (let id in users) {
-                if(users[id].Name && users[id].Name.toLowerCase() === nameToSearch.toLowerCase()) {
-                    foundId = id;
-                    foundData = users[id];
-                    break;
-                }
+        function updateDisplay() {
+            const user = currentUsers[selectedId];
+            if(!user) {
+                document.getElementById('detailPanel').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                return;
             }
-
-            document.getElementById('search-loading').classList.add('hidden');
-
-            if(foundId) {
-                currentUser = { id: foundId, ...foundData };
-                displayUser();
-            } else {
-                alert("Oyuncu bulunamadı! Lütfen ismin Firebase'de kayıtlı olduğundan emin olun.");
-            }
+            document.getElementById('pName').innerText = user.Name || "Bilinmiyor";
+            document.getElementById('pId').innerText = "ID: " + selectedId;
+            document.getElementById('valTL').innerText = user.TL || 0;
+            document.getElementById('valMins').innerText = user.Minutes || 0;
+            document.getElementById('pDate').innerText = "Giriş: " + (user.SonGiris || "--");
+            document.getElementById('pAvatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${selectedId}&width=420&height=420&format=png`;
         }
 
-        function displayUser() {
-            document.getElementById('user-details').classList.remove('hidden');
-            document.getElementById('pName').innerText = currentUser.Name;
-            document.getElementById('pId').innerText = "ID: " + currentUser.id;
-            document.getElementById('pDate').innerText = "Son Giriş: " + (currentUser.SonGiris || "Yok");
-            document.getElementById('valTL').innerText = currentUser.TL || 0;
-            document.getElementById('valMins').innerText = currentUser.Minutes || 0;
-            document.getElementById('pAvatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${currentUser.id}&width=420&height=420&format=png`;
+        // VERİ GÜNCELLEME (SET VEYA ADD)
+        async function updateData(type, mode) {
+            const inputField = document.getElementById(`input${type}`);
+            const amount = parseInt(inputField.value);
+            if(isNaN(amount)) return alert("Sayı gir!");
+
+            let finalValue = amount;
+            if(mode === 'add') finalValue = (currentUsers[selectedId][type] || 0) + amount;
+
+            await db.ref(`users/${selectedId}`).update({ [type]: finalValue });
+            inputField.value = '';
         }
 
-        // VERİ GÜNCELLEME (Set / Add)
-        async function updateStat(type, mode) {
-            if(!currentUser) return;
-            const inputId = mode + type;
-            const val = parseInt(document.getElementById(inputId).value);
-            
-            if(isNaN(val)) return alert("Geçerli bir sayı gir!");
-
-            let finalValue = val;
-            if(mode === 'add') {
-                finalValue = (currentUser[type] || 0) + val;
-            }
-
-            await db.ref(`users/${currentUser.id}`).update({ [type]: finalValue });
-            currentUser[type] = finalValue;
-            
-            document.getElementById('val' + type).innerText = finalValue;
-            document.getElementById(inputId).value = "";
-            alert("Başarıyla Kaydedildi!");
-        }
-
-        // SIFIRLAMA
-        async function resetVal(type) {
-            if(confirm(type + " sıfırlansın mı?")) {
-                await db.ref(`users/${currentUser.id}`).update({ [type]: 0 });
-                currentUser[type] = 0;
-                document.getElementById('val' + type).innerText = 0;
+        // TEKİL SIFIRLAMA
+        async function resetSpecific(type) {
+            if(confirm(`${type} sıfırlansın mı?`)) {
+                await db.ref(`users/${selectedId}`).update({ [type]: 0 });
             }
         }
 
-        // Başlangıçta dashboard'ı aç
-        updateGlobalStats();
+        // KULLANICIYI KOMPLE SİL
+        async function wipeUser() {
+            if(confirm("DİKKAT! Bu oyuncunun tüm verilerini Firebase'den sileceksin. Emin misin?")) {
+                await db.ref(`users/${selectedId}`).remove();
+                selectedId = null;
+            }
+        }
     </script>
 </body>
 </html>
